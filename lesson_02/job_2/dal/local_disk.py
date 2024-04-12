@@ -20,9 +20,12 @@ def read_from_disk(raw_dir: str) -> dict:
         JSONDecodeError: If the file is not a valid JSON or if the file cannot be decoded.
     """
     file_path = add_file_name_to_path(raw_dir, 'json')
-    with open(file_path, 'rb') as file:
-        return json.load(file)
-
+    try:
+        with open(file_path, 'rb') as file:
+            return json.load(file)
+    except FileNotFoundError as e:
+        print('No raw data was found for this date. Staging will be skipped...')
+        return {}
 
 def manage_directories(directory: str) -> None:
     """

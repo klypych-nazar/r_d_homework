@@ -8,6 +8,8 @@ def raw_to_stage(raw_dir: str, stg_dir: str) -> None:
     """
     # 1. get json_content from raw data
     json_content: dict = local_disk.read_from_disk(raw_dir=raw_dir)
+    if not json_content:
+        return
 
     # 2. Create or clean dir tree for stg_dir
     local_disk.manage_directories(stg_dir)
