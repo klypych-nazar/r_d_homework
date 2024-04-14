@@ -15,14 +15,14 @@ def save_to_disk(json_content: list[dict[str, str | int]], path: str) -> None:
     directory = os.path.dirname(path)
 
     # Check if the directory exists and clean it OR create it if it doesn't
-    _manage_directories(directory)
+    manage_directories(directory)
 
     # Save the JSON content to the specified path
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(json_content, f, ensure_ascii=False, indent=4)
 
 
-def _manage_directories(directory: str) -> None:
+def manage_directories(directory: str) -> None:
     """
     Ensures the given directory is empty by deleting all its contents if it already exists,
     or creates the directory if it does not exist.
@@ -32,19 +32,18 @@ def _manage_directories(directory: str) -> None:
     """
     if not os.path.exists(directory):
         os.makedirs(directory)
-    else:
-        for filename in os.listdir(directory):
-            file_path = os.path.join(directory, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print(f'Failed to delete {file_path}. Reason: {e}')
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except (OSError, FileNotFoundError, PermissionError) as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')
 
 
-def _compose_file_name(path: str, file_type: str = 'json') -> str:
+def compose_file_name(path: str, file_type: str = 'json') -> str:
     """
     Composes a complete file path by appending a file type to the base name extracted from the provided path.
 

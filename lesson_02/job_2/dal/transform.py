@@ -1,19 +1,6 @@
-from fastavro import writer, parse_schema
+from fastavro import writer
 
-
-schema = {
-    'type': 'record',
-    'namespace': 'job_2',
-    'name': 'sales',
-    'fields': [
-        {'name': 'client', 'type': 'string'},
-        {'name': 'purchase_date', 'type': 'string'},
-        {'name': 'product', 'type': 'string'},
-        {'name': 'price', 'type': 'int'}
-    ]
-}
-
-parsed_schema = parse_schema(schema)
+from lesson_02.job_2.dal.avro_schemas import parsed_schema
 
 
 def json_to_avro(json_data, file_name):

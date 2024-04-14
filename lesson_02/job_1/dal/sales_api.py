@@ -1,11 +1,6 @@
-import os
-
 import httpx
 
-
-API_URL = 'https://fake-api-vycpfa6oca-uc.a.run.app'
-SALES_ENDPOINT = f'{API_URL}/sales'
-AUTH_TOKEN = os.environ.get('AUTH_TOKEN')
+from lesson_02.job_1.settings import SALES_ENDPOINT, AUTH_TOKEN
 
 
 def get_sales(date: str) -> list[dict[str, str | int]]:
@@ -18,21 +13,15 @@ def get_sales(date: str) -> list[dict[str, str | int]]:
     data = []
     headers = {'Authorization': AUTH_TOKEN}
     page = 1
-    while True:
-        params = {'date': date, 'page': page}
-        with httpx.Client() as client:
-            response = client.get(SALES_ENDPOINT, params=params, headers=headers)
-            if response.status_code == 404:  # no data or no more pages to get
-                if page == 1:
-                    print('No records found')
-                else:
-                    print(f'Collected {page} pages with {len(data)} records.')
-                break
+    params = {'date': date, 'page': page}
+    with httpx.Client() as client:
+        response = client.get(SALES_ENDPOINT, params=params, headers=headers)
+        while response.status_code != 404 or not (len(response.json()) < 100):
             data.extend(response.json())
-            if len(response.json()) < 100:  # last page for sure
-                print(f'Collected {page} pages with {len(data)} records.')
-                break
             page += 1
+            params = {'date': date, 'page': page}
+            response = client.get(SALES_ENDPOINT, params=params, headers=headers)
+    print(f'Collected {page - 1} pages with {len(data)} records.') if data else print(f'No records found')
     return data
 
 
