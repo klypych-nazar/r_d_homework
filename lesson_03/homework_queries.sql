@@ -24,7 +24,7 @@ ORDER BY nr_films DESC;
 
 -- 2.1 - CTE
 -- CTE to calculate the total number of rentals per film
-WITH RentalCount AS (SELECT COUNT(*) rents_count, i.film_id, f.title
+WITH rental_count AS (SELECT COUNT(*) rents_count, i.film_id, f.title
                      FROM rental r
                               JOIN inventory i ON r.inventory_id = i.inventory_id
                               JOIN film f ON i.film_id = f.film_id
@@ -37,7 +37,7 @@ SELECT a.actor_id,
 FROM actor a
          JOIN film_actor fa ON a.actor_id = fa.actor_id
          JOIN film f ON fa.film_id = f.film_id
-         JOIN RentalCount rc ON rc.film_id = f.film_id
+         JOIN rental_count rc ON rc.film_id = f.film_id
 GROUP BY a.actor_id
 ORDER BY total_rents DESC
 LIMIT 10;
@@ -77,7 +77,7 @@ LIMIT 1;
 
 -- 3.2 - CTE
 -- Calculate the total revenue per film category
-WITH TotalRevenue AS (SELECT fc.category_id,
+WITH total_revenue AS (SELECT fc.category_id,
                              SUM(p.amount) AS total_revenue
                       FROM payment p
                                JOIN rental r ON p.rental_id = r.rental_id
@@ -88,7 +88,7 @@ WITH TotalRevenue AS (SELECT fc.category_id,
 SELECT c.name,
        tr.total_revenue
 FROM category c
-         JOIN TotalRevenue tr ON c.category_id = tr.category_id
+         JOIN total_revenue tr ON c.category_id = tr.category_id
 ORDER BY tr.total_revenue DESC
 LIMIT 1;
 -- Execution Time: from ~25 ms to ~40 ms
@@ -124,19 +124,19 @@ FROM (SELECT film_id
 */
 -- 5.1 - CTE + SUBQUERY
 -- a CTE to identify films classified as children's films
-WITH ChildrenFilms AS (SELECT fc.film_id
+WITH children_films AS (SELECT fc.film_id
                        FROM film_category fc
                        WHERE fc.category_id = 3)
 -- Main query to fetch top 3 actors who have appeared in the most children's films
-SELECT CONCAT(a.first_name, ' ', a.last_name) actor_name, Top3ChildrenActors.nr_films
+SELECT CONCAT(a.first_name, ' ', a.last_name) actor_name, top_3_children_actors.nr_films
 FROM (-- Subquery to determine top 3 actors by the number of children's films they've appeared in
          SELECT fa.actor_id, COUNT(fa.actor_id) nr_films
          FROM film_actor fa
-                  JOIN ChildrenFilms ON ChildrenFilms.film_id = fa.film_id
+                  JOIN children_films ON children_films.film_id = fa.film_id
          GROUP BY fa.actor_id
          ORDER BY nr_films DESC
-         LIMIT 3) Top3ChildrenActors
-         JOIN actor a ON a.actor_id = Top3ChildrenActors.actor_id;
+         LIMIT 3) top_3_children_actors
+         JOIN actor a ON a.actor_id = top_3_children_actors.actor_id;
 -- Join to get actor names
 -- Execution Time: from ~1.2 ms to ~3.6 ms
 
