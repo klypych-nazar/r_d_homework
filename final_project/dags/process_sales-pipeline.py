@@ -1,9 +1,9 @@
 from airflow import DAG
 from airflow.utils.dates import days_ago
 from airflow.models import Variable
-from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateExternalTableOperator
+from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateExternalTableOperator, \
+    BigQueryCreateEmptyTableOperator, BigQueryInsertJobOperator
 from google.cloud import storage
-
 
 BUCKET_NAME = Variable.get('BUCKET_NAME')
 PROJECT_NAME = Variable.get('PROJECT_NAME')
@@ -24,14 +24,12 @@ def list_csv_files(prefix='sales/'):
 
 
 with DAG(
-    'process_sales_pipeline',
-    default_args=default_args,
-    schedule_interval=None,
-    catchup=False,
-    tags=['pipeline', 'bronze']
+        'process_sales_pipeline',
+        default_args=default_args,
+        schedule_interval=None,
+        catchup=False,
+        tags=['pipeline']
 ) as dag:
-
-    # Step 1: Load data into Bronze
     create_sales_external_table = BigQueryCreateExternalTableOperator(
         task_id='create_sales_external_table',
         destination_project_dataset_table=f'{PROJECT_NAME}.bronze.external_sales',
@@ -47,4 +45,40 @@ with DAG(
         skip_leading_rows=1
     )
 
-    create_sales_external_table
+    create_empty_silver_table = BigQueryCreateEmptyTableOperator(
+        task_id='create_empty_silver_table',
+        project_id=PROJECT_NAME,
+        dataset_id='silver',
+        table_id='sales',
+        schema_fields=[
+            {'name': 'client_id', 'type': 'INTEGER', 'mode': 'NULLABLE'},
+            {'name': 'purchase_date', 'type': 'DATE', 'mode': 'NULLABLE'},
+            {'name': 'product_name', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'price', 'type': 'INTEGER', 'mode': 'NULLABLE'}
+        ],
+        time_partitioning={
+            "type": "DAY",
+            "field": "purchase_date"
+        },
+        if_exists='ignore'
+    )
+
+    clean_and_load_to_silver = BigQueryInsertJobOperator(
+        task_id='clean_and_load_to_silver',
+        configuration={
+            "query": {
+                "query": f"""
+                        INSERT INTO `{PROJECT_NAME}.silver.sales` (client_id, purchase_date, product_name, price)
+                        SELECT
+                            SAFE_CAST(CustomerId AS INTEGER) AS client_id,
+                            SAFE_CAST(PurchaseDate AS DATE) AS purchase_date,
+                            UPPER(Product) AS product_name,
+                            SAFE_CAST(REPLACE(Price, '$', '') AS INTEGER) AS price
+                        FROM `{PROJECT_NAME}.bronze.external_sales`
+                    """,
+                "useLegacySql": False,
+            }
+        }
+    )
+
+    create_sales_external_table >> create_empty_silver_table >> clean_and_load_to_silver
